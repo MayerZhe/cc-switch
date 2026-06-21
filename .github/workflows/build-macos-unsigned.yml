@@ -57,19 +57,22 @@ jobs:
 
       - name: Create Release Note
         run: |
+          cat > /tmp/release-notes.md << 'NOTES_EOF'
+          ## Security Fixes
+          
+          - DB file permissions: chmod 600 (owner only)
+          - Backup file permissions: chmod 600
+          - proxy_live_backup: API keys redacted
+          - Keychain integration: Real API keys stored in macOS Keychain, DB only contains FROM_KEYCHAIN placeholder
+          - Claude + Codex adapters resolve FROM_KEYCHAIN at request time
+          
+          ### Build Info
+          - Unsigned - built on fork without Apple Developer signing
+          - Right-click, Open to bypass Gatekeeper on first launch
+          - Source: feat/keychain-integration branch
+          NOTES_EOF
           gh release edit "${GITHUB_REF_NAME#refs/tags/}" \
             --title "CC Switch Security Fix Build" \
-            --notes "## Security Fixes
-
-- DB file permissions: chmod 600 (owner only)
-- Backup file permissions: chmod 600
-- proxy_live_backup: API keys redacted
-- 🔑 **Keychain integration**: Real API keys stored in macOS Keychain, DB only contains FROM_KEYCHAIN placeholder
-- Claude + Codex adapters resolve FROM_KEYCHAIN at request time
-
-### Build Info
-- **Unsigned** — built on fork without Apple Developer signing
-- Right-click → Open to bypass Gatekeeper on first launch
-- Source: \`feat/keychain-integration\` branch"
+            --notes-file /tmp/release-notes.md
         env:
           GH_TOKEN: ${{ github.token }}
