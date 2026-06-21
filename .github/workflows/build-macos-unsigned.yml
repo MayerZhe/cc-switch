@@ -1,0 +1,75 @@
+name: Build macOS DMG (Unsigned)
+
+on:
+  push:
+    tags:
+      - 'v*-unsigned'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+
+      - uses: dtolnay/rust-toolchain@stable
+      - run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/cache@v5
+        with:
+          path: ~/.local/share/pnpm/store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build unsigned Tauri app
+        run: pnpm tauri build --ci
+        env:
+          CI: "true"
+
+      - name: Upload DMG as artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: CC-Switch-macOS-unsigned
+          path: src-tauri/target/**/dmg/*.dmg
+          retention-days: 7
+
+      - name: Upload DMG to Release
+        run: |
+          DMG=$(find src-tauri/target -name "*.dmg" 2>/dev/null | head -1)
+          if [ -z "$DMG" ]; then
+            DMG=$(find src-tauri/target -name "CC-Switch*" 2>/dev/null | head -1)
+          fi
+          echo "Found DMG: $DMG"
+          cp "$DMG" "CC-Switch-macOS-unsigned.dmg"
+          gh release upload "${GITHUB_REF_NAME#refs/tags/}" "CC-Switch-macOS-unsigned.dmg" --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Create Release Note
+        run: |
+          gh release edit "${GITHUB_REF_NAME#refs/tags/}" \
+            --title "CC Switch Security Fix Build" \
+            --notes "## Security Fixes
+
+- DB file permissions: chmod 600 (owner only)
+- Backup file permissions: chmod 600
+- proxy_live_backup: API keys redacted
+- 🔑 **Keychain integration**: Real API keys stored in macOS Keychain, DB only contains FROM_KEYCHAIN placeholder
+- Claude + Codex adapters resolve FROM_KEYCHAIN at request time
+
+### Build Info
+- **Unsigned** — built on fork without Apple Developer signing
+- Right-click → Open to bypass Gatekeeper on first launch
+- Source: \`feat/keychain-integration\` branch"
+        env:
+          GH_TOKEN: ${{ github.token }}
