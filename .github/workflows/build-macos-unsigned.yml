@@ -22,18 +22,26 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 9
+          run_install: false
+
+      - name: Get pnpm store directory
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+
       - uses: actions/cache@v5
         with:
-          path: ~/.local/share/pnpm/store
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: ${{ runner.os }}-${{ runner.arch }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-${{ runner.arch }}-pnpm-store-
 
-      - run: pnpm install --frozen-lockfile
+      - name: Install frontend deps
+        run: pnpm install --frozen-lockfile
 
       - name: Build unsigned Tauri app
+        timeout-minutes: 60
         run: |
           python3 << 'PYEOF'
 import json
@@ -44,9 +52,7 @@ if 'plugins' in d and 'updater' in d['plugins']:
 with open('src-tauri/tauri.conf.json', 'w') as f:
     json.dump(d, f, indent=2)
 PYEOF
-          pnpm tauri build --ci
-        env:
-          CI: "true"
+          pnpm tauri build --target universal-apple-darwin
 
       - name: Upload DMG as artifact
         uses: actions/upload-artifact@v5
