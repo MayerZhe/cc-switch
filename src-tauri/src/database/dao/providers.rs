@@ -1,6 +1,7 @@
 use crate::database::{lock_conn, Database};
 use crate::error::AppError;
 use crate::provider::{Provider, ProviderMeta};
+use crate::services::keychain;
 use indexmap::IndexMap;
 use rusqlite::params;
 use std::collections::{HashMap, HashSet};
@@ -183,6 +184,10 @@ impl Database {
             .transaction()
             .map_err(|e| AppError::Database(e.to_string()))?;
 
+        // ── Keychain: 将 settings_config 中的真实 Key 替换为 FROM_KEYCHAIN ──
+        let mut safe_config = provider.settings_config.clone();
+        keychain::redirect_keys_to_keychain(&mut safe_config);
+
         let mut meta_clone = provider.meta.clone().unwrap_or_default();
         let endpoints = std::mem::take(&mut meta_clone.custom_endpoints);
 
@@ -216,7 +221,7 @@ impl Database {
                 WHERE id = ?13 AND app_type = ?14",
                 params![
                     provider.name,
-                    serde_json::to_string(&provider.settings_config).map_err(|e| {
+                    serde_json::to_string(&safe_config).map_err(|e| {
                         AppError::Database(format!("Failed to serialize settings_config: {e}"))
                     })?,
                     provider.website_url,
@@ -246,7 +251,7 @@ impl Database {
                     provider.id,
                     app_type,
                     provider.name,
-                    serde_json::to_string(&provider.settings_config)
+                    serde_json::to_string(&safe_config)
                         .map_err(|e| AppError::Database(format!("Failed to serialize settings_config: {e}")))?,
                     provider.website_url,
                     provider.category,

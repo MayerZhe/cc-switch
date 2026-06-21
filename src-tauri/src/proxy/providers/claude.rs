@@ -17,6 +17,7 @@
 use super::{AuthInfo, AuthStrategy, ProviderAdapter, ProviderType};
 use crate::provider::Provider;
 use crate::proxy::error::ProxyError;
+use crate::services::keychain;
 use serde_json::{json, Value};
 
 const ANTHROPIC_THINKING_PLACEHOLDER: &str = "tool call";
@@ -564,7 +565,7 @@ impl ClaudeAdapter {
                 .filter(|s| !s.is_empty())
             {
                 log::debug!("[Claude] 使用 ANTHROPIC_AUTH_TOKEN");
-                return Some(key.to_string());
+                return keychain::resolve_key(key, "ANTHROPIC_AUTH_TOKEN");
             }
             if let Some(key) = env
                 .get("ANTHROPIC_API_KEY")
@@ -573,7 +574,7 @@ impl ClaudeAdapter {
                 .filter(|s| !s.is_empty())
             {
                 log::debug!("[Claude] 使用 ANTHROPIC_API_KEY");
-                return Some(key.to_string());
+                return keychain::resolve_key(key, "ANTHROPIC_API_KEY");
             }
             // OpenRouter key
             if let Some(key) = env
@@ -593,7 +594,7 @@ impl ClaudeAdapter {
                 .filter(|s| !s.is_empty())
             {
                 log::debug!("[Claude] 使用 OPENAI_API_KEY");
-                return Some(key.to_string());
+                return keychain::resolve_key(key, "OPENAI_API_KEY");
             }
             // Gemini Native key
             if let Some(key) = env
@@ -603,7 +604,7 @@ impl ClaudeAdapter {
                 .filter(|s| !s.is_empty())
             {
                 log::debug!("[Claude] 使用 GEMINI_API_KEY");
-                return Some(key.to_string());
+                return keychain::resolve_key(key, "GEMINI_API_KEY");
             }
         }
 

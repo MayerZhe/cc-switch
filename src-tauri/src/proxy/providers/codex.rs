@@ -8,6 +8,7 @@
 use super::{AuthInfo, AuthStrategy, ProviderAdapter};
 use crate::provider::{CodexChatReasoningConfig, Provider};
 use crate::proxy::error::ProxyError;
+use crate::services::keychain;
 use regex::Regex;
 use serde_json::Value as JsonValue;
 use std::collections::HashSet;
@@ -420,7 +421,7 @@ impl CodexAdapter {
                 .map(str::trim)
                 .filter(|key| !key.is_empty())
             {
-                return Some(key.to_string());
+                return keychain::resolve_key(key, "OPENAI_API_KEY");
             }
         }
 
