@@ -35,8 +35,7 @@ jobs:
 
       - name: Build unsigned Tauri app
         run: |
-          # Remove updater pubkey so Tauri doesn't try to sign
-          python3 -c "
+          python3 << 'PYEOF'
 import json
 with open('src-tauri/tauri.conf.json') as f:
     d = json.load(f)
@@ -44,7 +43,7 @@ if 'plugins' in d and 'updater' in d['plugins']:
     d['plugins']['updater'].pop('pubkey', None)
 with open('src-tauri/tauri.conf.json', 'w') as f:
     json.dump(d, f, indent=2)
-          "
+PYEOF
           pnpm tauri build --ci
         env:
           CI: "true"
