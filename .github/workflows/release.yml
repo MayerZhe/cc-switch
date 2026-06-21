@@ -24,6 +24,10 @@ jobs:
             arch: arm64
           - os: macos-14
 
+    env:
+      HAS_SIGNING_SECRETS: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
+      HAS_APPLE_SECRETS: ${{ secrets.APPLE_SIGNING_CERTIFICATE_BASE64 != '' }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -95,12 +99,11 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Prepare Tauri signing key
+        if: env.HAS_SIGNING_SECRETS == 'true'
         shell: bash
         run: |
-          # 调试：检查 Secret 是否存在
           if [ -z "${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}" ]; then
             echo "❌ TAURI_SIGNING_PRIVATE_KEY Secret 为空或不存在" >&2
-            echo "请检查 GitHub 仓库 Settings > Secrets and variables > Actions" >&2
             exit 1
           fi
           
@@ -151,7 +154,7 @@ jobs:
           echo "✅ Tauri signing key prepared"
 
       - name: Import Apple signing certificate
-        if: runner.os == 'macOS'
+        if: runner.os == 'macOS' && env.HAS_SIGNING_SECRETS == 'true'
         shell: bash
         run: |
           set -euo pipefail
