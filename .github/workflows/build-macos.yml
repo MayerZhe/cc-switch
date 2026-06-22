@@ -37,16 +37,8 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Disable updater plugin (skip signing)
-        run: |
-          python3 -c '
-import json
-p="src-tauri/tauri.conf.json"
-d=json.load(open(p))
-if "plugins" in d and "updater" in d["plugins"]:
-    del d["plugins"]["updater"]
-json.dump(d,open(p,"w"),indent=2)
-'
+      - name: Disable updater plugin
+        run: python3 scripts/disable-updater.py
 
       - name: Build Tauri app
         timeout-minutes: 60
