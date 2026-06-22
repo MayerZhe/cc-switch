@@ -1,0 +1,58 @@
+name: Build macOS DMG (Unsigned)
+
+on:
+  push:
+    tags:
+      - 'v*-unsigned'
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.12.3
+          run_install: false
+
+      - name: Get pnpm store directory
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+
+      - uses: actions/cache@v5
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-store-
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Remove updater signing pubkey
+        run: |
+          python3 -c "
+import json
+p='src-tauri/tauri.conf.json'
+d=json.load(open(p))
+d.get('plugins',{}).get('updater',{}).pop('pubkey',None)
+json.dump(d,open(p,'w'),indent=2)
+          "
+
+      - name: Build Tauri app
+        timeout-minutes: 60
+        run: pnpm tauri build --target universal-apple-darwin
+
+      - name: Find and upload DMG
+        uses: actions/upload-artifact@v5
+        with:
+          name: CC-Switch-macOS-unsigned
+          path: src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+          retention-days: 7
