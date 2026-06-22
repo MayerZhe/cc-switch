@@ -37,14 +37,14 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Disable updater plugin
-        run: python3 scripts/disable-updater.py
-
-      - name: Build Tauri app
+      - name: Build Tauri app (DMG only, no signing)
         timeout-minutes: 60
-        run: pnpm tauri build --target universal-apple-darwin
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ''
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
+        run: pnpm tauri build --target universal-apple-darwin --bundles dmg
 
-      - name: Find and upload DMG
+      - name: Upload DMG artifact
         uses: actions/upload-artifact@v5
         with:
           name: CC-Switch-macOS-unsigned
