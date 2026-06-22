@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*-unsigned'
+  workflow_dispatch:
 
 jobs:
   build:
@@ -38,13 +39,7 @@ jobs:
 
       - name: Remove updater signing pubkey
         run: |
-          python3 -c "
-import json
-p='src-tauri/tauri.conf.json'
-d=json.load(open(p))
-d.get('plugins',{}).get('updater',{}).pop('pubkey',None)
-json.dump(d,open(p,'w'),indent=2)
-          "
+          python3 -c 'import json; p="src-tauri/tauri.conf.json"; d=json.load(open(p)); d.get("plugins",{}).get("updater",{}).pop("pubkey",None); json.dump(d,open(p,"w"),indent=2)'
 
       - name: Build Tauri app
         timeout-minutes: 60
